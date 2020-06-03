@@ -9,8 +9,8 @@ nxglo = 32
 nyglo = 32
 nzglo = 16
 
-npx = 1
-npy = 1
+npx = 2
+npy = 2
 npz = 1
 
 nx = nxglo//npx
@@ -31,7 +31,8 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "plume_ref"
+param.IO["datadir"] = "/home1/scratch/groullet/data/Nyles"
+param.IO["expname"] = "plume_ref4"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u']
 
@@ -83,7 +84,7 @@ class Forcing(object):
         self.Q = 1e-5*np.exp(-z/delta)/delta*msk
 
         self.bclim = stratif(z)
-        
+
         d0 = 0.45
         horwidth = 0.05
         h0 = 0.95

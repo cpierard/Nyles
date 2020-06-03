@@ -35,21 +35,21 @@ def azimuthal_avg(field, x, y, dx, dy):
     assert len(field.shape) == 2
     assert len(x.shape) == 2
     assert len(y.shape) == 2
-    
+
     d = np.sqrt(x**2+y**2)
 
-    
+
     xmax = np.max(x)
     ymax = np.max(y)
     rmax = min([xmax, ymax])
 
     dr = min(dx, dy)
     nr = int(rmax/dr+0.5)
-    
+
     r = np.arange(nr)*dr
     # mid ring radial distance
     rm = 0.5*(r[1:]+r[:-1])
-    
+
     res = np.zeros(nr-1)
     # average over rings
     for k in range(nr-1):
@@ -67,7 +67,7 @@ def test_azimuthal_avg():
     r = np.sqrt(xx**2+yy**2)
 
     f = lambda x: np.sin(x*5)
-    
+
     phi = f(r)
     dx = x[1]-x[0]
     dy = y[1]-y[0]
@@ -78,11 +78,11 @@ def test_azimuthal_avg():
     plt.plot(rm, f(rm), label='exact')
     plt.legend()
     plt.xlabel('r')
-    
+
 if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
 
     plt.ion()
-    
+
     test_azimuthal_avg()
