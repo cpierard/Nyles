@@ -1,5 +1,4 @@
 import numpy as np
-
 import nyles as nyles_module
 import parameters
 
@@ -9,8 +8,8 @@ nxglo = 32
 nyglo = 32
 nzglo = 16
 
-npx = 2
-npy = 2
+npx = 1
+npy = 1
 npz = 1
 
 nx = nxglo//npx
@@ -31,7 +30,7 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["datadir"] = "/home1/scratch/groullet/data/Nyles"
+#param.IO["datadir"] = "/home1/scratch/groullet/data/Nyles"
 param.IO["expname"] = "plume_ref4"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u']
