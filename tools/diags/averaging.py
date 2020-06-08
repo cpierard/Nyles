@@ -29,10 +29,9 @@ def horizontal_avg(field, yidx=slice(None), xidx=slice(None)):
         raise ValueError("field should be a 2D or 3D array")
     return res
 
-
 def azimuthal_avg(field, x, y, dx, dy):
     """
-    
+
     """
     # todo: make the function accepts 3D or 4D array for field
     assert len(field.shape) == 2
@@ -40,7 +39,6 @@ def azimuthal_avg(field, x, y, dx, dy):
     assert len(y.shape) == 2
 
     d = np.sqrt(x**2+y**2)
-
 
     xmax = np.max(x)
     ymax = np.max(y)
@@ -81,6 +79,7 @@ def test_azimuthal_avg():
     plt.plot(rm, f(rm), label='exact')
     plt.legend()
     plt.xlabel('r')
+    plt.savefig('test_azimuth')
 
 if __name__ == '__main__':
 

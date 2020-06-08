@@ -211,7 +211,8 @@ plt.xlabel("U")
 plt.ylabel("V")
 
 
-# to compute the product u*w we need to estimate u and w at the same location. Let's say the cell centers
+# to compute the product u*w we need to estimate u and w at the same location.
+# Let's say the cell centers
 # u3 and w3 are 3D array (z,y,x)
 #
 # | x | x | x | x |  schematic of four cells

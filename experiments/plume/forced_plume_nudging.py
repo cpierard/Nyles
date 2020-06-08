@@ -91,7 +91,7 @@ class Forcing(object):
 
         dampingcoef = 1./200 # <= rationalize this value
 
-        self.damping = 0.5*(1+np.tanh((d-d0)/horwidth))
+        self.damping = 0.5*(1+np.tanh((d-d0)/horwidth)) # sponge layer
         self.damping *= 0.5*(1+np.tanh((z-h0)/verwidth))
         self.damping *= dampingcoef
 
