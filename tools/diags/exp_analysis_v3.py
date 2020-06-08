@@ -2,14 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from netCDF4 import Dataset
 
-
 plt.ion()
 
-
-datadir = "/home/roullet/data/Nyles"
-expname = "ekman_0"
+datadir = "../data/Nyles"
+expname = "plume_ref4"
 ncfile = "%s/%s/%s_00_hist.nc" % (datadir, expname, expname)
-
 
 def read_param(ncfile):
     """ Retrieve all the parameters stored in the history file

@@ -1,16 +1,15 @@
 """
 Tools to read variables from native, unjoined, history files
 """
+
 import numpy as np
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 import os
 
-
 class Variable(object):
     def __init__(self, nctemplate, varname, debug=False):
         """
-
         the name of the template should be passed here,
 
         template is a string such that ncfile = template % rank,
@@ -30,7 +29,7 @@ class Variable(object):
         >>> v = Variable(nctemplate,"b")
         >>> b = v[:, 4, :, -1]
 
-        The method also allows for b=v[-1] or b=b[-1,0]
+        the method also allows for b=v[-1] or b=b[-1,0]
         that return respectively a 3D and a 2D array
 
         """
@@ -42,7 +41,7 @@ class Variable(object):
 
         dimensions, shape, localshape, procs, nprocs = self.get_dimensions(
             nctemplate % 0)
-
+        
         self.dimensions = dimensions
         self.shape = shape
         self.localshape = localshape

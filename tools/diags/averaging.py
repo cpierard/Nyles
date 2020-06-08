@@ -2,6 +2,7 @@ import numpy as np
 
 def horizontal_avg(field, yidx=slice(None), xidx=slice(None)):
     """
+
     Do a horizontal average
 
     Parameters
@@ -30,7 +31,9 @@ def horizontal_avg(field, yidx=slice(None), xidx=slice(None)):
 
 
 def azimuthal_avg(field, x, y, dx, dy):
-
+    """
+    
+    """
     # todo: make the function accepts 3D or 4D array for field
     assert len(field.shape) == 2
     assert len(x.shape) == 2

@@ -4,7 +4,7 @@ use the pickle module to save data in a file
 import numpy as np
 import pickle
 
-nz = 10
+nz = 10 # ?
 
 data = np.linspace(0, 10, nz)
 print(data)
@@ -12,10 +12,10 @@ print(data)
 file = "mydata.pkl"
 with open(file, "wb") as fid:
     pickle.dump(data, fid)
-    
+
 with open(file, "rb") as fid:
     d = pickle.load(fid)
-    
+
 assert (d == data).all(), "problem: data differ"
 print("data read are the same as data written")
 
@@ -27,7 +27,7 @@ data = {"x": np.linspace(0, 10, nz), "title": "some text", "y": np.ones(4)}
 file = "mydata2.pkl"
 with open(file, "wb") as fid:
     pickle.dump(data, fid)
-    
+
 with open(file, "rb") as fid:
     d = pickle.load(fid)
 
