@@ -4,9 +4,9 @@ import parameters
 
 
 nh = 3
-nxglo = 32
-nyglo = 32
-nzglo = 16
+nxglo = 64
+nyglo = 16
+nzglo = 64
 
 npx = 1
 npy = 1
@@ -40,7 +40,7 @@ param.IO["disk_space_warning"] = 0.5  # in GB
 param.IO["simplified_grid"] = True
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 3600.*24
+param.time["tend"] = 3600.*12
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 200.
@@ -78,9 +78,9 @@ class Forcing(object):
 
         d = np.sqrt(x**2+y**2)
         r0 = 0.01 # <= radius of the heat source (domain horizontal extent is 100 r0)
-        msk = 0.5*(1.-np.tanh(d/r0))
+        msk = 0.5*(1. - np.tanh(d/r0))
         delta = 1/(param["global_nz"])
-        self.Q = 1e-5*np.exp(-z/delta)/delta*msk
+        self.Q = 1e-4*np.exp(-z/delta)/delta*msk
 
         self.bclim = stratif(z)
 
@@ -91,8 +91,8 @@ class Forcing(object):
 
         dampingcoef = 1./200 # <= rationalize this value
 
-        self.damping = 0.5*(1+np.tanh((d-d0)/horwidth)) # sponge layer
-        self.damping *= 0.5*(1+np.tanh((z-h0)/verwidth))
+        self.damping = 0.5*(1+np.tanh((d - d0)/horwidth)) # sponge layer
+        self.damping *= 0.5*(1+np.tanh((z - h0)/verwidth))
         self.damping *= dampingcoef
 
     def add(self, state, dstate, time):
