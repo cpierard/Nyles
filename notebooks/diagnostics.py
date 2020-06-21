@@ -16,6 +16,11 @@ class plume:
             print(f'There is no {file} file in folder.')
 
     def read_vars(self, vars, file):
+        """
+        Read a list of variables from the paramters of the simulation
+        'NN' for Brunt-vaisala squared.
+        'KE' for Kinetic energy.
+        """
         fields = {}
         for var in vars:
             with Dataset(file, 'r') as nc:
@@ -25,6 +30,8 @@ class plume:
                     fields[var] = self.brunt_vaisalla(file)
                 elif var == 'KE':
                     fields[var] = self.kinetic_energy(file)
+                elif var == 'test':
+                    fields[var] = self.test(file)
         return fields
 
     def brunt_vaisalla(self, file):
@@ -36,6 +43,12 @@ class plume:
         f = self.read_vars(['u','v','w'], file)
         KE = (f['u']**2 + f['v']**2 + f['w']**2)/2
         return KE
+
+    def test(self, file):
+        f = self.read_vars(['u'], file)
+        test_field = np.zeros_like(f['u'])
+        return test_field
+
 
     def disk_average(self, var):
         """
