@@ -1,3 +1,16 @@
+"""
+The objective of this module is to average and integrate the variables of
+interest, and compute the terms in the kinetic and potential energy balance
+equations, specifically for the forced plume
+experiments.
+The main idea is to perform this operations without merging the subdmains that
+are created from a simulation with several cores, in order to save memory.
+In development. To do:
+- Compute APE.
+- Volume, buoyancy and momentum balances.
+- ...
+"""
+
 from netCDF4 import Dataset
 import numpy as np
 import numpy.ma as ma
@@ -46,7 +59,7 @@ class plume:
 
     def test(self, file):
         f = self.read_vars(['u'], file)
-        test_field = np.zeros_like(f['u'])
+        test_field = np.zeros_like(f['u']) # to verify the averaging
         return test_field
 
 
