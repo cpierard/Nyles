@@ -2,11 +2,10 @@ import numpy as np
 import nyles as nyles_module
 import parameters
 
-
 nh = 3
-nxglo = 32
-nyglo = 32
-nzglo = 16
+nxglo = 64*2
+nyglo = 64*2
+nzglo = 32*2
 
 npx = 1
 npy = 1
@@ -31,7 +30,7 @@ param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
 #param.IO["datadir"] = "/home1/scratch/groullet/data/Nyles"
-param.IO["expname"] = "forced_plume"
+param.IO["expname"] = "forced_plume_64z"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u']
 
@@ -40,7 +39,7 @@ param.IO["disk_space_warning"] = 0.5  # in GB
 param.IO["simplified_grid"] = True
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 3600.*24
+param.time["tend"] = 3600.*12
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 200.
@@ -60,15 +59,12 @@ param.MPI["npy"] = npy
 param.MPI["npz"] = npz
 param.multigrid["nglue"] = 1
 
-
 param.physics["forced"] = True
 param.physics["rotating"] = True
 param.physics["coriolis"] = 1e-4
 
-
 def stratif(z):
     return 1e-2*(z-0.5)
-
 
 class Forcing(object):
     def __init__(self, param, grid):
@@ -99,7 +95,6 @@ class Forcing(object):
         db = dstate.b.view("i")
         b = state.b.view("i")
         db += self.Q - self.damping*(b-self.bclim)
-
 
 nyles = nyles_module.Nyles(param)
 

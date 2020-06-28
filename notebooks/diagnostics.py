@@ -1,8 +1,7 @@
 """
 The objective of this module is to average and integrate the variables of
-interest, and compute the terms in the kinetic and potential energy balance
-equations, specifically for the forced plume
-experiments.
+interest and compute the terms in the kinetic and potential energy balance
+equations, specifically for the forced plume experiment.
 The main idea is to perform this operations without merging the subdmains that
 are created from a simulation with several cores, in order to save memory.
 In development. To do:
@@ -31,6 +30,7 @@ class plume:
     def read_vars(self, vars, file):
         """
         Read a list of variables from the paramters of the simulation
+
         'NN' for Brunt-vaisala squared.
         'KE' for Kinetic energy.
         """
@@ -54,7 +54,12 @@ class plume:
 
     def kinetic_energy(self, file):
         f = self.read_vars(['u','v','w'], file)
+        u = self.velocity_interpolation(f['u'], axis=2)
+        v = self.velocity_interpolation(f['u'], axis=3)
+        w = self.velocity_interpolation(f['u'], axis=1)
+
         KE = (f['u']**2 + f['v']**2 + f['w']**2)/2
+
         return KE
 
     def test(self, file):
@@ -62,6 +67,35 @@ class plume:
         test_field = np.zeros_like(f['u']) # to verify the averaging
         return test_field
 
+    def velocity_interpolation(a, axis=-1):
+        """
+        velocity_interpolation(a, axis=-1)
+
+        Linear interpolation for velocity in a staggered type C grid.
+        Based in numpy.diff.
+
+        Parameters
+        ----------
+        a : array_like
+            Input array
+        axis : int, optional
+            The axis along which the difference is taken, default is the
+            last axis.
+
+        Returns
+        -------
+        U_interp : ndarray
+            Array with n-1 point in the axis direction.
+        """
+        nd = len(a.shape)
+        slice1 = [slice(None)] * nd
+        slice2 = [slice(None)] * nd
+        slice1[axis] = slice(None, -1)
+        slice2[axis] = slice(1, None)
+        slice1 = tuple(slice1)
+        slice2 = tuple(slice2)
+        a_interp = (a[slice1] + a[slice2])/2
+        return a_interp
 
     def disk_average(self, var):
         """
@@ -77,7 +111,7 @@ class plume:
         npx = self.params['npx']
         npy = self.params['npy']
         npz = self.params['npz']
-        number_domains = npx*npy*npz # so far only works for number_domains < 100
+        number_domains = npx*npy*npz # so far only works for number_domains<100
         Lx = self.params['Lx']
         Ly = self.params['Ly']
         Lz = self.params['Lz']
