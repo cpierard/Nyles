@@ -14,6 +14,7 @@ from netCDF4 import Dataset
 import numpy as np
 import numpy.ma as ma
 import pickle
+from iosubdomains import Variable
 
 class plume:
 
@@ -72,7 +73,7 @@ class plume:
         velocity_interpolation(a, axis=-1)
 
         Linear interpolation for velocity in a staggered type C grid.
-        Based in numpy.diff.
+        Z-convention (nz, ny, nx)
 
         Parameters
         ----------
@@ -85,16 +86,29 @@ class plume:
         Returns
         -------
         U_interp : ndarray
-            Array with n-1 point in the axis direction.
+            Array with same dimension as input.
         """
         nd = len(a.shape)
+
+        # adding one extra dimension to field at the lower boundary with
+        # zeros.
+        a_shape = list(a.shape)
+        a_shape[axis] = a.shape[axis] + 1
+        a_shape = tuple(a_shape)
+        slice0 = [slice(None)] * nd
+        slice0[axis] = slice(1, None)
+        a_prim = np.zeros(a_shape)
+        a_prim[slice0] = a
+
+        # doing the interpolation
         slice1 = [slice(None)] * nd
         slice2 = [slice(None)] * nd
         slice1[axis] = slice(None, -1)
         slice2[axis] = slice(1, None)
         slice1 = tuple(slice1)
         slice2 = tuple(slice2)
-        a_interp = (a[slice1] + a[slice2])/2
+
+        a_interp = (a_prim[slice1] + a_prim[slice2])/2
         return a_interp
 
     def disk_average(self, var):
