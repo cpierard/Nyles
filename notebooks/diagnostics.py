@@ -42,11 +42,11 @@ class plume:
                 fields[var] = Variable(self.template, var)[:]
             except:
                 if var == 'NN':
-                    fields[var] = self.brunt_vaisalla(file)
+                    fields[var] = self.brunt_vaisalla()
                 elif var == 'KE':
-                    fields[var] = self.kinetic_energy(file)
+                    fields[var] = self.kinetic_energy()
                 elif var == 'test':
-                    fields[var] = self.test(file)
+                    fields[var] = self.test()
 
         # for var in vars:
         #     with Dataset(file, 'r') as nc:
