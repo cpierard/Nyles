@@ -88,6 +88,7 @@ class plume:
             - 'KE' for kinetic energy.
             - The list will increase as it increases the number of functions.
         """
+        # change the mask for the one in Flux
         npx = self.params['npx']
         npy = self.params['npy']
         npz = self.params['npz']
@@ -109,9 +110,6 @@ class plume:
 
         means = np.zeros((n_time, nz))
 
-        #for i in range(number_domains):
-        #    subfile = f'{self.path}{self.name}_{i:02d}_hist.nc'
-
         fields = self.read_vars([var, 'x', 'y'])
 
         XX, YY = np.meshgrid(fields['x'], fields['y'])
@@ -126,7 +124,8 @@ class plume:
         #means = means/number_domains
         return means
 
-    def Flux(self, var):
+
+    def Flux(self, flux):
         """
         Computes the average in a horizontal disk, neglecting the sponge layers
         in the borders, and not merging subfiles. Only works for horizontal
@@ -137,37 +136,52 @@ class plume:
             - 'KE' for kinetic energy.
             - The list will increase as it increases the number of functions.
         """
-        #npx = self.params['npx']
-        #npy = self.params['npy']
-        #npz = self.params['npz']
-        #number_domains = npx*npy*npz # so far only works for number_domains<100
+        if flux == 'mass':
+            set_integrand = lambda x: x
+
+        elif flux == 'momentum':
+            set_integrand = lambda x: x**2
+
+        elif flux == 'buoyancy':
+            b = self.read_vars('b')['b']
+            set_integrand = lambda x: x*b
+
+        npx = self.params['npx']
         Lx = self.params['Lx']
         Ly = self.params['Ly']
         Lz = self.params['Lz']
-        x0 = Lx/2 # center point in the x domain.
-        y0 = Ly/2 # center point in the y domain.
         nz = self.params['nz']
 
-        #if var == 'NN': # maybe interpolate is field...
-        #    nz = nz - 1
-
+        dx = Lx/npx
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
-        r_max = 1700 # define this radius from nudging.
 
-        flux = np.zeros((n_time, nz))
-        fields = self.read_vars([var, 'w', 'x', 'y'])
-        XX, YY = np.meshgrid(fields['x'], fields['y'])
-        r = np.sqrt((XX - x0)**2 + (YY - y0)**2)
-        mask = ma.masked_outside(r, 0, r_max)
+        r_max = 0.45 # as in forced_plume_nudging.py
+        z_max = 0.95
+
+        flux = np.zeros(n_time)
+        aux = np.zeros(nz)
+
+        fields = self.read_vars(['w', 'x', 'y', 'z'])
+        w = diagnostics.velocity_interpolation(fields['w'], axis=1)
+
+        XX, YY, ZZ = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5,
+                             fields['z']/Lz)
+
+        r = np.sqrt(XX**2 + YY**2)
+        mask_1 = ma.masked_outside(r, 0, r_max)
+        mask_2 = ma.masked_outside(z, 0, z_max)
+
+        # defining integrand
+        integrand = set_integrand(w)
 
         for t in range(n_time):
-            for z_lvl in range(nz):
-                field_new = ma.masked_array(fields[var][t, z_lvl, :, :], mask.mask)
-                means[t, z_lvl] = field_new.mean()
+            field_new = ma.masked_array(integrand[t], mask_1.mask)
+            field_new = ma.masked_array(field_new, mask_2.mask)
+            flux[t] = field_new.sum()
 
-        #means = means/number_domains
-        return means
+        return flux
 
 def velocity_interpolation(a, axis=-1):
     """
