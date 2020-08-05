@@ -77,7 +77,7 @@ class plume:
         test_field = np.zeros_like(f['u']) # to verify the averaging
         return test_field
 
-    def disk_average(self, var):
+    def disk_average(self, var, r_lim):
         """
         Computes the average in a horizontal disk, neglecting the sponge layers
         in the borders, and not merging subfiles. Only works for horizontal
@@ -106,16 +106,35 @@ class plume:
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
 
-        r_max = 1700 # define this radius from nudging.
+        r_max = r_lim #0.45 # as in forced_plume_nudging.py
+        z_max = 0.95
 
         means = np.zeros((n_time, nz))
 
         fields = self.read_vars([var, 'x', 'y'])
 
-        XX, YY = np.meshgrid(fields['x'], fields['y'])
-        r = np.sqrt((XX - x0)**2 + (YY - y0)**2)
-        mask = ma.masked_outside(r, 0, r_max)
+        if var in ['u', 'v', 'w']:
+            axis_vel = {'u': 3, 'v': 2, 'w':1}
+            fields[var] = velocity_interpolation(fields[var], axis=axis_vel[var])
 
+        XX, YY = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
+
+        r = np.sqrt(XX**2 + YY**2)
+        mask = ma.masked_outside(r, 0, r_max)
+        #mask_2 = ma.masked_outside(ZZ, 0, z_max)
+
+        # defining integrand
+
+        # for t in range(n_time):
+        #     field_new = ma.masked_array(integrand[t], mask_1.mask)
+        #     #field_new = ma.masked_array(field_new, mask_2.mask)
+        #     flux[t] = field_new.sum()
+
+        # XX, YY = np.meshgrid(fields['x'], fields['y'])
+        # r = np.sqrt((XX - x0)**2 + (YY - y0)**2)
+        # mask = ma.masked_outside(r, 0, r_max)
+        #
         for t in range(n_time):
             for z_lvl in range(nz):
                 field_new = ma.masked_array(fields[var][t, z_lvl, :, :], mask.mask)
@@ -125,16 +144,13 @@ class plume:
         return means
 
 
-    def Flux(self, flux):
+    def Flux(self, flux, r_lim, z_lim):
         """
-        Computes the average in a horizontal disk, neglecting the sponge layers
-        in the borders, and not merging subfiles. Only works for horizontal
-        subdomains (so far).
-        var a variable in string format. It can be:
-            - a var in netCDF file. e.g. 'b', 'u', 'w', etc.
-            - 'NN' for squared Brunt-Vaisala freq.
-            - 'KE' for kinetic energy.
-            - The list will increase as it increases the number of functions.
+        Computes the the mass, momentum and buoyancy fluxes in a cildrical
+        control volume, defined by the nudging (the sponge layer) limits
+
+        flux - a string idicating the tipe of flux: "mass", "momentum" or
+         "buoyancy".
         """
         if flux == 'mass':
             set_integrand = lambda x: x
@@ -156,30 +172,92 @@ class plume:
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
 
-        r_max = 0.45 # as in forced_plume_nudging.py
-        z_max = 0.95
+        r_max = r_lim # as in forced_plume_nudging.py
+        z_max = z_lim
+        new_nz = int(nz*z_lim)
 
         flux = np.zeros(n_time)
-        aux = np.zeros(nz)
 
         fields = self.read_vars(['w', 'x', 'y', 'z'])
-        w = diagnostics.velocity_interpolation(fields['w'], axis=1)
+        w = velocity_interpolation(fields['w'], axis=1)
 
-        XX, YY, ZZ = np.meshgrid(fields['x']/Lx - 0.5,
-                             fields['y']/Ly - 0.5,
-                             fields['z']/Lz)
+        XX, YY = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
 
         r = np.sqrt(XX**2 + YY**2)
         mask_1 = ma.masked_outside(r, 0, r_max)
-        mask_2 = ma.masked_outside(z, 0, z_max)
+        #mask_2 = ma.masked_outside(ZZ, 0, z_max)
+
+        # defining integrand
+        integrand = set_integrand(w)
+
+        # for t in range(n_time):
+        #     field_new = ma.masked_array(integrand[t], mask_1.mask)
+        #     field_new = ma.masked_array(field_new, mask_2.mask)
+        #     flux[t] = field_new.sum()
+        #
+        # return flux
+
+        for t in range(n_time):
+            aux = np.zeros(new_nz)
+            for z_i in range(new_nz):
+                field_new = ma.masked_array(integrand[t, z_i], mask_1.mask)
+                aux[z_i] = field_new.sum()
+
+            flux[t] = aux.sum()
+
+        return flux
+
+    def Flux_levels(self, flux, r_lim=0.45):
+        """
+        Computes the the mass, momentum and buoyancy fluxes in a cildrical
+        control volume, defined by the nudging (the sponge layer) limits
+
+        flux - a string idicating the tipe of flux: "mass", "momentum" or
+         "buoyancy".
+        """
+        if flux == 'mass':
+            set_integrand = lambda x: x
+
+        elif flux == 'momentum':
+            set_integrand = lambda x: x**2
+
+        elif flux == 'buoyancy':
+            b = self.read_vars('b')['b']
+            set_integrand = lambda x: x*b
+
+        npx = self.params['npx']
+        Lx = self.params['Lx']
+        Ly = self.params['Ly']
+        Lz = self.params['Lz']
+        nz = self.params['nz']
+
+        dx = Lx/npx
+        t = self.read_vars('t')['t']
+        n_time = t.shape[0]
+
+        r_max = r_lim # as in forced_plume_nudging.py
+        z_max = 0.95
+
+        flux = np.zeros((n_time, nz))
+
+        fields = self.read_vars(['w', 'x', 'y', 'z'])
+        w = velocity_interpolation(fields['w'], axis=1)
+
+        XX, YY = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
+
+        r = np.sqrt(XX**2 + YY**2)
+        mask_1 = ma.masked_outside(r, 0, r_max)
+        #mask_2 = ma.masked_outside(ZZ, 0, z_max)
 
         # defining integrand
         integrand = set_integrand(w)
 
         for t in range(n_time):
-            field_new = ma.masked_array(integrand[t], mask_1.mask)
-            field_new = ma.masked_array(field_new, mask_2.mask)
-            flux[t] = field_new.sum()
+            for z_i in range(nz):
+                field_new = ma.masked_array(integrand[t, z_i], mask_1.mask)
+                flux[t, z_i] = field_new.sum()
 
         return flux
 
