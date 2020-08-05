@@ -263,8 +263,6 @@ class plume:
 
 def velocity_interpolation(a, axis=-1):
     """
-    velocity_interpolation(a, axis=-1)
-
     Linear interpolation for velocity in a staggered type C grid.
     Z-convention (nz, ny, nx)
 
@@ -304,3 +302,27 @@ def velocity_interpolation(a, axis=-1):
 
     a_interp = (a_prim[slice1] + a_prim[slice2])/2
     return a_interp
+
+def find_z_plume(array, percent):
+    """
+    Returns the index corresponding to the height of the plume.
+
+
+    Parameters
+    ----------
+    array : array_like
+        must be the momentum flux computed with Flux_levels.
+    percent : float between 0 to 1
+        the criteria for the plume heigth. Normally is 10% (i.e. 0.1)
+        of the maximum momentum flux.
+
+    Returns
+    -------
+    idx : int
+        index of the top limit.
+    """
+    array = np.asarray(array[1:])
+    maximum = array.max()
+    difference = np.abs(array - maximum*percent)
+    idx = difference.argmin()
+    return idx+1
