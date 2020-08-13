@@ -73,7 +73,7 @@ class Forcing(object):
         z = grid.z_b.view('i') / param["Lz"]
 
         d = np.sqrt(x**2+y**2)
-        r0 = 0.01 # <= radius of the heat source (domain horizontal extent is 100 r0)
+        r0 = 0.01 # <= radius of the heat source (ratio with respect to the  horizontal domain)
         msk = 0.5*(1.-np.tanh(d/r0))
         delta = 1/(param["global_nz"])
         self.Q = 1e-5*np.exp(-z/delta)/delta*msk

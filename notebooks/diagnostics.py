@@ -239,6 +239,7 @@ class plume:
         r_max = r_lim # as in forced_plume_nudging.py
         z_max = 0.95
 
+
         flux = np.zeros((n_time, nz))
 
         fields = self.read_vars(['w', 'x', 'y', 'z'])
@@ -260,6 +261,51 @@ class plume:
                 flux[t, z_i] = field_new.sum()
 
         return flux
+
+    def Budget(self, var, r_lim, z_lim):
+        """
+
+        """
+        npx = self.params['npx']
+        Lx = self.params['Lx']
+        Ly = self.params['Ly']
+        Lz = self.params['Lz']
+        nz = self.params['nz']
+
+        dx = Lx/npx
+        t = self.read_vars('t')['t']
+        n_time = t.shape[0]
+
+        r_max = r_lim # as in forced_plume_nudging.py
+        z_max = z_lim
+        new_nz = int(nz*z_lim)
+
+        budget = np.zeros(n_time)
+        # ineficient to read all velocities, but no time to be efficient here
+        fields = self.read_vars([var, 'w', 'u', 'v', 'x', 'y'])
+        w = velocity_interpolation(fields['w'], axis=1)
+        v = velocity_interpolation(fields['v'], axis=2)
+        u = velocity_interpolation(fields['u'], axis=3)
+
+        X, Y = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
+        r = np.sqrt(X**2 + Y**2)
+
+        mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
+        mask_2 = ma.masked_outside(r, 0, r_max)
+
+        for t in range(n_time):
+            sides = 0
+            for z_i in range(new_nz):
+                f = fields[var][t,z_i]
+                rad_proy = (u[t,z_i]*X + v[t,z_i]*Y)/r
+                aux = ma.masked_array(f*rad_proy, mask_1.mask)
+                sides += aux.sum()
+
+            lid = ma.masked_array(f*w[t, new_nz], mask_2.mask)
+            budget[t] = sides + lid.sum()
+
+        return budget
 
 def velocity_interpolation(a, axis=-1):
     """
