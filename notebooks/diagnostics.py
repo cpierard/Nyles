@@ -30,7 +30,9 @@ class plume:
         except:
             print(f'There is no {file} file in folder.')
 
-        self.params['dx'] = (self.params['Lx']/self.params['global_nx']) # just maintain a grid with the same dx in the three directions
+        self.params['dx'] = (self.params['Lx']/self.params['global_nx'])
+        self.params['dy'] = (self.params['Lx']/self.params['global_ny'])
+        self.params['dz'] = (self.params['Lx']/self.params['global_nz']) # just maintain a grid with the same dx in the three directions
 
     def read_vars(self, vars):
        """
@@ -291,19 +293,80 @@ class plume:
                              fields['y']/Ly - 0.5)
         r = np.sqrt(X**2 + Y**2)
 
-        mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
-        mask_2 = ma.masked_outside(r, 0, r_max)
+        #mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
+        mask = ma.masked_outside(r, 0, r_max)
+        m = mask.mask*1
+        mask_ring = np.roll(m, -1, axis=0) + np.roll(m, 1, axis=0)
+        mask_ring += np.roll(m, -1, axis=1) + np.roll(m, 1, axis=1)
+        mask_ring -= 4*m
 
         for t in range(n_time):
             sides = 0
-            for z_i in range(new_nz):
+            for z_i in range(new_nz-1):
                 f = fields[var][t,z_i]
                 rad_proy = (u[t,z_i]*X + v[t,z_i]*Y)/r
-                aux = ma.masked_array(f*rad_proy, mask_1.mask)
-                sides += aux.sum()
+                #aux = ma.masked_array(f*rad_proy, mask_1.mask)
+                aux = ma.masked_array(f*rad_proy, mask_ring>=0)
+                sides += aux.mean()
 
-            lid = ma.masked_array(f*w[t, new_nz], mask_2.mask)
-            budget[t] = sides + lid.sum()
+            lid = ma.masked_array(f*w[t, new_nz], mask.mask)
+            budget[t] = sides + lid.mean()
+
+
+        return budget
+
+    def Budget_2(self, var, r_lim, z_lim):
+        """
+
+        """
+        npx = self.params['npx']
+        Lx = self.params['Lx']
+        Ly = self.params['Ly']
+        Lz = self.params['Lz']
+        nz = self.params['nz']
+
+        dx = Lx/npx
+
+        t = self.read_vars('t')['t']
+        n_time = t.shape[0]
+
+        r_max = r_lim # as in forced_plume_nudging.py
+        z_max = z_lim
+        new_nz = int(nz*z_lim)
+
+        budget = np.zeros(n_time)
+        # ineficient to read all velocities, but no time to be efficient here
+        fields = self.read_vars(['x', 'y'])
+
+        X, Y = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
+        r = np.sqrt(X**2 + Y**2)
+
+        #mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
+        mask = ma.masked_outside(r, 0, r_max)
+        m = mask.mask*1
+        mask_ring = np.roll(m, -1, axis=0) + np.roll(m, 1, axis=0)
+        mask_ring += np.roll(m, -1, axis=1) + np.roll(m, 1, axis=1)
+        mask_ring -= 4*m
+
+        for t_i in range(n_time):
+            sides = 0
+            for z_i in range(new_nz-1):
+                u = Variable(self.template, 'u')[t_i, z_i]/self.params['dx']
+                u = velocity_interpolation(u, axis=1)
+                v = Variable(self.template, 'v')[t_i, z_i]/self.params['dy']
+                v = velocity_interpolation(v, axis=0)
+                f = Variable(self.template, var)[t_i, z_i]
+
+                rad_proy = (u*X + v*Y)/r
+                aux = ma.masked_array(f*rad_proy, mask_ring>=0)
+                sides += aux.mean()
+
+            w = Variable(self.template, 'w')[t_i]/self.params['dz']
+            w = velocity_interpolation(w, axis=0)
+
+            lid = ma.masked_array(f*w[new_nz], mask.mask)
+            budget[t_i] = sides + lid.mean()
 
         return budget
 
