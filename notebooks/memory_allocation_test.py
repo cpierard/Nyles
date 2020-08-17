@@ -5,6 +5,7 @@ import numpy.ma as ma
 import tracemalloc
 
 exp = diag.plume('../../data/Nyles/forced_plume_32z/', 'forced_plume_32z')
+#exp = diag.plume('../../data/Nyles/plume_2days_pressure/', 'plume_2days_pressure')
 
 tracemalloc.start()
 b_budget = exp.Budget('b', 0.25, 0.55)
