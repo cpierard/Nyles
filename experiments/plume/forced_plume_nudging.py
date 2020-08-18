@@ -30,16 +30,16 @@ param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
 #param.IO["datadir"] = "/home1/scratch/groullet/data/Nyles"
-param.IO["expname"] = "forced_plume_64z"
+param.IO["expname"] = "2days_pressure"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b', 'u']
+param.IO["variables_in_history"] = ['b', 'u', 'p']
 
-param.IO["timestep_history"] = 600.  # 0.0 saves every frame
+param.IO["timestep_history"] = 1000.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 param.IO["simplified_grid"] = True
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 3600.*12
+param.time["tend"] = 3600.*12.*2.
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 200.
