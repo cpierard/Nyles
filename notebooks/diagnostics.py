@@ -59,6 +59,12 @@ class plume:
                     fields[var] = self.available_potential_energy()
                 elif var == 'test':
                     fields[var] = self.test()
+                elif var == 'pr':
+                    fields[var] = self.backgroud_pressure()
+                elif var == 'Q_times_z':
+                    fields[var] = self.E_2()
+                elif var == 'br_times_z':
+                    fields[var] = self.E_1()
 
             if var == 'u':
                 fields[var] = fields[var]/self.params['dx']
@@ -91,6 +97,73 @@ class plume:
         for z_i in range(len(br)):
             APE[:,z_i] = (b[:,z_i] - br[z_i])**2/(2*NN)
         return APE
+
+    def Q_flux(self):
+        """
+        Bottom buondary (volumetric) heat flux.
+        """
+        fields = self.read_vars(['x','y','z'])
+        Z, Y, X = np.meshgrid(fields['z']/self.params['Lz'],
+                    fields['y']/self.params['Ly'] - 0.5,
+                     fields['x']/self.params['Lx'] - 0.5, indexing='ij')
+
+        r = np.sqrt(X**2 + Y**2)
+        r0 = 0.01
+        msk = 0.5*(1.-np.tanh(r/r0))
+        delta = 1/(self.params["global_nz"])
+        Q =1e-5*np.exp(-Z/delta)/delta *msk
+
+        return Q
+
+    def buoyancy_forcing(self):
+        t = self.read_vars('t')['t']
+        n_time = t.shape[0]
+        b = self.read_vars(['b'])['b']
+        br = b[0,:,0,0]
+        NN = (np.diff(br)/self.params['dz'])[0]
+        Q = self.Q_flux()
+        phi_b2= np.zeros(n_time)
+
+        for t_i in range(n_time):
+            aux = np.zeros(len(br))
+            #print(aux.shape)
+            for z_i in range(len(br)):
+                #print(z_i)
+                aux[z_i] = (Q[z_i]*(b[t_i,z_i] - br[z_i])/(NN)).sum()
+
+            phi_b2[t_i] = aux.sum()
+
+        return phi_b2
+
+    def backgroud_pressure(self):
+        b = self.read_vars(['b'])['b']
+        br = b[0]
+        dz = self.params['dz']
+        pr = np.zeros_like(b)
+        for t_i in range(pr.shape[0]):
+            pr[t_i] = -br*dz - br[0,0,0]*dz
+        return pr
+
+    def E_2(self):
+        global_shape = self.params['global_shape']
+        z = self.read_vars(['z'])['z']
+        Q = self.Q_flux()
+        Qz0 = np.zeros(global_shape)
+        for t_i in range(global_shape[0]):
+            for z_i in range(len(z)):
+                Qz0[t_i, z_i] = Q[z_i]*z[z_i]
+        return Qz0
+
+    def E_2(self):
+        global_shape = self.params['global_shape']
+        z = self.read_vars(['z'])['z']
+        b = self.read_vars(['b'])['b']
+        br = b[0]
+        brz = np.zeros(global_shape)
+        for t_i in range(global_shape[0]):
+            for z_i in range(len(z)):
+                brz[t_i, z_i] = br[z_i]*z[z_i]
+        return Qz0
 
     def test(self):
         f = self.read_vars(['u'], file)
@@ -267,22 +340,17 @@ class plume:
         """
 
         """
-        npx = self.params['npx']
         Lx = self.params['Lx']
         Ly = self.params['Ly']
         Lz = self.params['Lz']
         nz = self.params['nz']
-
-        dx = Lx/npx
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
-
         r_max = r_lim # as in forced_plume_nudging.py
         z_max = z_lim
         new_nz = int(nz*z_lim)
-
         budget = np.zeros(n_time)
-        # ineficient to read all velocities, but no time to be efficient here
+
         fields = self.read_vars([var, 'w', 'u', 'v', 'x', 'y'])
         w = velocity_interpolation(fields['w'], axis=1)
         v = velocity_interpolation(fields['v'], axis=2)
@@ -291,8 +359,6 @@ class plume:
         X, Y = np.meshgrid(fields['x']/Lx - 0.5,
                              fields['y']/Ly - 0.5)
         r = np.sqrt(X**2 + Y**2)
-
-        #mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
         mask = ma.masked_outside(r, 0, r_max)
         m = mask.mask*1
         mask_ring = np.roll(m, -1, axis=0) + np.roll(m, 1, axis=0)
@@ -304,7 +370,6 @@ class plume:
             for z_i in range(new_nz-1):
                 f = fields[var][t_i,z_i]
                 rad_proy = (u[t_i,z_i]*X + v[t_i,z_i]*Y)/r
-                #aux = ma.masked_array(f*rad_proy, mask_1.mask)
                 aux = ma.masked_array(f*rad_proy, mask_ring>=0)
                 sides += aux.mean()
 
@@ -317,13 +382,10 @@ class plume:
         """
 
         """
-        npx = self.params['npx']
         Lx = self.params['Lx']
         Ly = self.params['Ly']
         Lz = self.params['Lz']
         nz = self.params['nz']
-
-        dx = Lx/npx
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
 
@@ -332,7 +394,6 @@ class plume:
         new_nz = int(nz*z_lim)
 
         budget = np.zeros(n_time)
-        # ineficient to read all velocities, but no time to be efficient here
         fields = self.read_vars([var, 'u', 'v', 'x', 'y'])
         v = velocity_interpolation(fields['v'], axis=2)
         u = velocity_interpolation(fields['u'], axis=3)
@@ -340,8 +401,6 @@ class plume:
         X, Y = np.meshgrid(fields['x']/Lx - 0.5,
                              fields['y']/Ly - 0.5)
         r = np.sqrt(X**2 + Y**2)
-
-        #mask_1 = ma.masked_outside(r, r_max - 0.01, r_max)
         mask = ma.masked_outside(r, 0, r_max)
         m = mask.mask*1
         mask_ring = np.roll(m, -1, axis=0) + np.roll(m, 1, axis=0)
@@ -353,11 +412,38 @@ class plume:
             for z_i in range(new_nz-1):
                 f = fields[var][t_i,z_i]
                 rad_proy = (u[t_i,z_i]*X + v[t_i,z_i]*Y)/r
-                #aux = ma.masked_array(f*rad_proy, mask_1.mask)
                 aux = ma.masked_array(f*rad_proy, mask_ring>=0)
                 sides += aux.mean()
 
             budget[t_i] = sides
+
+        return budget
+
+    def Lid_flux(self, var, r_lim, z_lim):
+        Lx = self.params['Lx']
+        Ly = self.params['Ly']
+        Lz = self.params['Lz']
+        nz = self.params['nz']
+        t = self.read_vars('t')['t']
+        n_time = t.shape[0]
+
+        r_max = r_lim # as in forced_plume_nudging.py
+        z_max = z_lim
+        new_nz = int(nz*z_lim)
+
+        budget = np.zeros(n_time)
+        fields = self.read_vars([var, 'w', 'x', 'y'])
+        w = velocity_interpolation(fields['w'], axis=1)
+
+        X, Y = np.meshgrid(fields['x']/Lx - 0.5,
+                             fields['y']/Ly - 0.5)
+        r = np.sqrt(X**2 + Y**2)
+        mask = ma.masked_outside(r, 0, r_max)
+
+        for t_i in range(n_time):
+            f = fields[var][t_i,new_nz]
+            lid = ma.masked_array(f*w[t_i,new_nz], mask.mask)
+            budget[t_i] = lid.mean()
 
         return budget
 
@@ -395,6 +481,26 @@ class plume:
             budget[t_i] = aux.mean()
 
         return budget
+
+        # def Phi_z(self):
+        #     t = self.read_vars('t')['t']
+        #     n_time = t.shape[0]
+        #     b = self.read_vars(['b'])['b']
+        #     br = b[0,:,0,0]
+        #     NN = (np.diff(br)/self.params['dz'])[0]
+        #     Q = self.Q_flux()
+        #     phi_b2= np.zeros(n_time)
+        #
+        #     for t_i in range(n_time):
+        #         aux = np.zeros(len(br))
+        #         #print(aux.shape)
+        #         for z_i in range(len(br)):
+        #             #print(z_i)
+        #             aux[z_i] = (Q[z_i]*(b[t_i,z_i] - br[z_i])/(NN)).sum()
+        #
+        #         phi_b2[t_i] = aux.sum()
+        #
+        #     return phi_b2
 
 def velocity_interpolation(a, axis=-1):
     """
