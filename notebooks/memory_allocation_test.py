@@ -8,8 +8,6 @@ import time
 #exp = diag.plume('../../data/Nyles/forced_plume_32z/', 'forced_plume_32z')
 exp = diag.plume('../../data/Nyles/plume_2days_pressure_4/', 'plume_2days_pressure_4')
 
-
-
 start = time.time()
 tracemalloc.start()
 b_budget = exp.Budget('b', 0.25, 0.55)

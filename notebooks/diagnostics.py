@@ -57,6 +57,8 @@ class plume:
                     fields[var] = np.ones(self.params['global_shape'])
                 elif var == 'APE':
                     fields[var] = self.available_potential_energy()
+                elif var == 'Eb':
+                    fields[var] = self.background_potential_energy()
                 elif var == 'test':
                     fields[var] = self.test()
                 elif var == 'pr':
@@ -65,6 +67,8 @@ class plume:
                     fields[var] = self.E_2()
                 elif var == 'br_times_z':
                     fields[var] = self.E_1()
+                elif var == 'phi_z':
+                    fields[var] = self.buoyancy_flux()
 
             if var == 'u':
                 fields[var] = fields[var]/self.params['dx']
@@ -98,6 +102,11 @@ class plume:
             APE[:,z_i] = (b[:,z_i] - br[z_i])**2/(2*NN)
         return APE
 
+    def background_potential_energy(self):
+        b = self.read_vars(['b'])['b']
+        Eb = -b*z_r(b)
+        return Eb
+
     def Q_flux(self):
         """
         Bottom buondary (volumetric) heat flux.
@@ -114,6 +123,19 @@ class plume:
         Q =1e-5*np.exp(-Z/delta)/delta *msk
 
         return Q
+
+    def buoyancy_flux(self):
+        """
+        E_a --ϕ_z--> E_k
+        """
+        b = self.read_vars(['b'])['b']
+        w = self.read_vars(['w'])['w']
+        br = b[0,:,0,0]
+        #NN = (np.diff(br)/self.params['dz'])[0]
+        phi_z = np.zeros_like(b)
+        for z_i in range(len(br)):
+            phi_z[:,z_i] = w[:,z_i]*(b[:,z_i] - br[z_i])
+        return phi_z
 
     def buoyancy_forcing(self):
         t = self.read_vars('t')['t']
@@ -144,17 +166,7 @@ class plume:
             pr[t_i] = -br*dz - br[0,0,0]*dz
         return pr
 
-    def E_2(self):
-        global_shape = self.params['global_shape']
-        z = self.read_vars(['z'])['z']
-        Q = self.Q_flux()
-        Qz0 = np.zeros(global_shape)
-        for t_i in range(global_shape[0]):
-            for z_i in range(len(z)):
-                Qz0[t_i, z_i] = Q[z_i]*z[z_i]
-        return Qz0
-
-    def E_2(self):
+    def E_1(self):
         global_shape = self.params['global_shape']
         z = self.read_vars(['z'])['z']
         b = self.read_vars(['b'])['b']
@@ -163,6 +175,16 @@ class plume:
         for t_i in range(global_shape[0]):
             for z_i in range(len(z)):
                 brz[t_i, z_i] = br[z_i]*z[z_i]
+        return brz
+
+    def E_2(self):
+        global_shape = self.params['global_shape']
+        z = self.read_vars(['z'])['z']
+        Q = self.Q_flux()
+        Qz0 = np.zeros(global_shape)
+        for t_i in range(global_shape[0]):
+            for z_i in range(len(z)):
+                Qz0[t_i, z_i] = Q[z_i]*z[z_i]
         return Qz0
 
     def test(self):
@@ -475,32 +497,12 @@ class plume:
         for t_i in range(n_time):
             aux = np.zeros(new_nz)
             for z_i in range(new_nz):
-                field_new = ma.masked_array(fields[var][t_i,z_i], mask.mask)
+                field_new = ma.masked_array(fields[var][t_i,z_i],mask.mask)
                 aux[z_i] = field_new.mean()
 
             budget[t_i] = aux.mean()
 
         return budget
-
-        # def Phi_z(self):
-        #     t = self.read_vars('t')['t']
-        #     n_time = t.shape[0]
-        #     b = self.read_vars(['b'])['b']
-        #     br = b[0,:,0,0]
-        #     NN = (np.diff(br)/self.params['dz'])[0]
-        #     Q = self.Q_flux()
-        #     phi_b2= np.zeros(n_time)
-        #
-        #     for t_i in range(n_time):
-        #         aux = np.zeros(len(br))
-        #         #print(aux.shape)
-        #         for z_i in range(len(br)):
-        #             #print(z_i)
-        #             aux[z_i] = (Q[z_i]*(b[t_i,z_i] - br[z_i])/(NN)).sum()
-        #
-        #         phi_b2[t_i] = aux.sum()
-        #
-        #     return phi_b2
 
 def velocity_interpolation(a, axis=-1):
     """
@@ -567,3 +569,11 @@ def find_z_plume(array, percent):
     difference = np.abs(array - maximum*percent)
     idx = difference.argmin()
     return idx+1
+
+def z_r(b):
+    """
+    height at which the fluid parce with buoyancy b would reside if the
+    buoyancy field will be adiabatically rearranged to a state of static
+    equilibrium.
+    """
+    return b/1e-2 + 0.5
