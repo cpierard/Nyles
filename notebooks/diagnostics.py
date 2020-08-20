@@ -112,6 +112,21 @@ class plume:
             APE[:,z_i,:,:] = (b[:,z_i,:,:] - br[z_i])**2/(2*NN)
         return APE
 
+    # def available_potential_energy(self):
+    #     global_shape = self.params['global_shape']
+    #     b = self.read_vars(['b'])['b']
+    #     br = b[:,:,0,0] #let's assume that br changes in time.
+    #     # print('br', br.shape)
+    #     NN = (np.diff(br[0])/self.params['dz'])[0]
+    #     APE = np.zeros_like(b)
+    #     print('APE', APE.shape)
+    #     print('globla shape', global_shape)
+    #     for t_i in range(global_shape[0]):
+    #         for z_i in range(global_shape[1]):
+    #             # print('b[t_i,z_i,:,:]', b[t_i,z_i,:,:].shape)
+    #             APE[t_i,z_i,:,:] = (b[t_i,z_i,:,:] - br[t_i,z_i])**2/(2*NN)
+    #     return APE
+
     def background_potential_energy(self):
         b = self.read_vars(['b'])['b']
         Eb = -b*z_r(b)
