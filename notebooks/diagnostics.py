@@ -53,6 +53,8 @@ class plume:
                     fields[var] = self.brunt_vaisalla()
                 elif var == 'KE':
                     fields[var] = self.kinetic_energy()
+                elif var == 'Ep':
+                    fields[var] = self.potential_energy()
                 elif var == 'none':
                     fields[var] = np.ones(self.params['global_shape'])
                 elif var == 'APE':
@@ -93,13 +95,21 @@ class plume:
         KE = (f['u']**2 + f['v']**2 + f['w']**2)/2
         return KE
 
+    def potential_energy(self):
+        b = self.read_vars('b')['b']
+        z = self.read_vars('z')['z']
+        Ep = np.zeros_like(b)
+        for z_i in range(len(z)):
+            Ep[:,z_i] = -b[:,z_i]*z[z_i]
+        return Ep
+
     def available_potential_energy(self):
         b = self.read_vars(['b'])['b']
         br = b[0,:,0,0]
         NN = (np.diff(br)/self.params['dz'])[0]
         APE = np.zeros_like(b)
         for z_i in range(len(br)):
-            APE[:,z_i] = (b[:,z_i] - br[z_i])**2/(2*NN)
+            APE[:,z_i,:,:] = (b[:,z_i,:,:] - br[z_i])**2/(2*NN)
         return APE
 
     def background_potential_energy(self):
@@ -120,7 +130,7 @@ class plume:
         r0 = 0.01
         msk = 0.5*(1.-np.tanh(r/r0))
         delta = 1/(self.params["global_nz"])
-        Q =1e-5*np.exp(-Z/delta)/delta *msk
+        Q =1e-5*np.exp(-Z/delta)/delta*msk
 
         return Q
 
@@ -138,6 +148,9 @@ class plume:
         return phi_z
 
     def buoyancy_forcing(self):
+        """
+        ϕ_b2
+        """
         t = self.read_vars('t')['t']
         n_time = t.shape[0]
         b = self.read_vars(['b'])['b']
@@ -151,9 +164,9 @@ class plume:
             #print(aux.shape)
             for z_i in range(len(br)):
                 #print(z_i)
-                aux[z_i] = (Q[z_i]*(b[t_i,z_i] - br[z_i])/(NN)).sum()
+                aux[z_i] = (Q[z_i]*(b[t_i,z_i] - br[z_i])/(NN)).mean()
 
-            phi_b2[t_i] = aux.sum()
+            phi_b2[t_i] = aux.mean()
 
         return phi_b2
 
@@ -473,7 +486,6 @@ class plume:
         """
 
         """
-        npx = self.params['npx']
         Lx = self.params['Lx']
         Ly = self.params['Ly']
         Lz = self.params['Lz']
