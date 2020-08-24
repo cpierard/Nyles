@@ -114,21 +114,6 @@ class plume:
             APE[:,z_i,:,:] = (b[:,z_i,:,:] - br[z_i])**2/(2*NN)
         return APE
 
-    # def available_potential_energy(self):
-    #     global_shape = self.params['global_shape']
-    #     b = self.read_vars(['b'])['b']
-    #     br = b[:,:,0,0] #let's assume that br changes in time.
-    #     # print('br', br.shape)
-    #     NN = (np.diff(br[0])/self.params['dz'])[0]
-    #     APE = np.zeros_like(b)
-    #     print('APE', APE.shape)
-    #     print('globla shape', global_shape)
-    #     for t_i in range(global_shape[0]):
-    #         for z_i in range(global_shape[1]):
-    #             # print('b[t_i,z_i,:,:]', b[t_i,z_i,:,:].shape)
-    #             APE[t_i,z_i,:,:] = (b[t_i,z_i,:,:] - br[t_i,z_i])**2/(2*NN)
-    #     return APE
-
     def background_potential_energy(self):
         b = self.read_vars(['b'])['b']
         Eb = -b*z_r(b)
@@ -196,13 +181,6 @@ class plume:
                 p_mean = np.mean(p[t_i,z_i])
                 p_prime[t_i, z_i, :, :] = p[t_i, z_i, :, :] - p_mean
         return p_prime
-        # b = self.read_vars(['b'])['b']
-        # br = b[0]
-        # dz = self.params['dz']
-        # pr = np.zeros_like(b)
-        # for t_i in range(pr.shape[0]):
-        #     pr[t_i] = -br*dz - br[0,0,0]*dz
-        # return pr
 
     def vertical_pressure_flux(self, r_lim, z_lim):
         """
@@ -211,6 +189,9 @@ class plume:
         global_shape = self.params['global_shape']
         Lx = self.params['Lx']
         Ly = self.params['Ly']
+        dx = self.params['dx']
+        dy = self.params['dy']
+
         r_max = r_lim # as in forced_plume_nudging.py
         z_max = z_lim
         nz = global_shape[1]
@@ -231,15 +212,13 @@ class plume:
         # it multiplies an array of ones with w, instead of another varible.
         w_mean = self.Lid_flux('none', r_lim, z_lim)
 
-
         for t_i in range(global_shape[0]):
-        #for z_i in range(new_nz):
             p_mean = np.mean(p[t_i,new_nz,:,:])
             covar = (w[t_i,new_nz,:,:] - w_mean[t_i])*(p[t_i, new_nz, :, :] - p_mean)
             lid = ma.masked_array(covar, mask.mask)
-            budget[t_i] = lid.mean()
+            budget[t_i] = lid.sum()
 
-        return budget
+        return budget*dx*dy #dx is the computed from the Lx lenght
 
 
     def E_1(self):
@@ -553,6 +532,9 @@ class plume:
         Ly = self.params['Ly']
         Lz = self.params['Lz']
         nz = self.params['nz']
+        dx = self.params['dx']
+        dy = self.params['dy']
+        dz = self.params['dz']
 
         t = self.read_vars(['t'])['t']
         n_time = t.shape[0]
@@ -573,11 +555,11 @@ class plume:
             aux = np.zeros(new_nz)
             for z_i in range(new_nz):
                 field_new = ma.masked_array(fields[var][t_i,z_i],mask.mask)
-                aux[z_i] = field_new.mean()
+                aux[z_i] = field_new.sum()
 
-            budget[t_i] = aux.mean()
+            budget[t_i] = aux.sum()
 
-        return budget
+        return budget*dx*dy*dz
 
 def velocity_interpolation(a, axis=-1):
     """
