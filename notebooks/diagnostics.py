@@ -73,6 +73,8 @@ class plume:
                     fields[var] = self.buoyancy_flux()
                 elif var == 'phi_b':
                     fields[var] = self.buoyancy_forcing()
+                elif var == 'pr':
+                    fields[var] = self.backgroud_pressure()
 
             if var == 'u':
                 fields[var] = fields[var]/self.params['dx']
@@ -94,7 +96,7 @@ class plume:
         v = velocity_interpolation(f['v'], axis=2)
         w = velocity_interpolation(f['w'], axis=1)
 
-        KE = (f['u']**2 + f['v']**2 + f['w']**2)/2
+        KE = (f['u']**2 + f['v']**2 + f['w']**2)/2 #[L^2/T^2]
         return KE
 
     def potential_energy(self):
@@ -111,17 +113,26 @@ class plume:
         NN = (np.diff(br)/self.params['dz'])[0]
         APE = np.zeros_like(b)
         for z_i in range(len(br)):
-            APE[:,z_i,:,:] = (b[:,z_i,:,:] - br[z_i])**2/(2*NN)
+            APE[:,z_i,:,:] = (b[:,z_i,:,:] - br[z_i])**2/(2*NN) #[L^2/T^2]
         return APE
 
     def background_potential_energy(self):
         b = self.read_vars(['b'])['b']
-        Eb = -b*z_r(b)
+        Eb = -b*z_r(b) #[L^2/T^2]
         return Eb
+
+    def backgroud_pressure(self):
+        b = self.read_vars(['b'])['b']
+        br = b[0]
+        dz = self.params['dz']
+        pr = np.zeros_like(b)
+        for t_i in range(pr.shape[0]):
+            pr[t_i] = -br*dz - br[0,0,0]*dz
+        return pr
 
     def Q_flux(self):
         """
-        Bottom buondary (volumetric) heat flux.
+        Bottom buondary (volumetric) heat flux. [L/T^2]
         """
         fields = self.read_vars(['x','y','z'])
         Z, Y, X = np.meshgrid(fields['z']/self.params['Lz'],
@@ -138,7 +149,7 @@ class plume:
 
     def buoyancy_flux(self):
         """
-        E_a --ϕ_z--> E_k
+        E_a --ϕ_z--> E_k #[L/T][L/T^2] ~ [L^2 T^-3]
         """
         b = self.read_vars(['b'])['b']
         w = self.read_vars(['w'])['w']
@@ -152,7 +163,7 @@ class plume:
 
     def buoyancy_forcing(self):
         """
-        ϕ_b
+        ϕ_b  #[L^-1 T^-3][L/T^2][T^2] ~ [T^-3]
         """
         t = self.read_vars(['t'])['t']
         n_time = t.shape[0]
@@ -184,7 +195,7 @@ class plume:
 
     def vertical_pressure_flux(self, r_lim, z_lim):
         """
-        ϕp = <w'p'>
+        ϕp = w'p'dxdy #[L/T][T^-2 L^-1][L^2] ~ [L^2 T^-3]
         """
         global_shape = self.params['global_shape']
         Lx = self.params['Lx']
@@ -382,8 +393,9 @@ class plume:
         Ly = self.params['Ly']
         Lz = self.params['Lz']
         nz = self.params['nz']
+        dx = self.params['dx']
+        dy = self.params['dy']
 
-        dx = Lx/npx
         t = self.read_vars(['t'])['t']
         n_time = t.shape[0]
 
@@ -465,6 +477,9 @@ class plume:
         nz = self.params['nz']
         t = self.read_vars(['t'])['t']
         n_time = t.shape[0]
+        dx = self.params['dx']
+        dy = self.params['dy']
+        dz = self.params['dz']
 
         r_max = r_lim # as in forced_plume_nudging.py
         z_max = z_lim
@@ -490,7 +505,7 @@ class plume:
                 f = fields[var][t_i,z_i]
                 rad_proy = (u[t_i,z_i]*X + v[t_i,z_i]*Y)/r
                 aux = ma.masked_array(f*rad_proy, mask_ring>=0)
-                sides += aux.mean()
+                sides += aux.sum()
 
             budget[t_i] = sides
 
